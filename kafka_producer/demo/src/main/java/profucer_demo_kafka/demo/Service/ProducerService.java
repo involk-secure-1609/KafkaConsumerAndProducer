@@ -4,12 +4,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.*;
 
 @Service
 @Slf4j
@@ -17,7 +18,6 @@ public class ProducerService {
 
     @Autowired
     private KafkaTemplate<String,String> kafkaTemplate;
-
     //generateRandomTransaction
     public String generateRandomTransaction(){
         String vendors[]={"Amazon","Paypal","Visa","mastercard"};
@@ -26,8 +26,9 @@ public class ProducerService {
         return "Vendor: "+vendor+"Amount $"+amount;
     }
 
-    //SendPaymentTransactions Asynchronously
-    // @Scheduled(fixedRate = 2000)
+//    SendPaymentTransactions Asynchronously- this is preffered cuz a large no of transactions have to take
+    // place at the same time
+     @Scheduled(fixedRate = 2000)
     public void SendPaymentTransactionsAsynchronously(){
         String transaction= generateRandomTransaction();
         System.out.println("Sending payment transactions {}"+transaction);
@@ -62,8 +63,8 @@ public class ProducerService {
 
     //SendPaymentTransactions-2()synchronously
 
-    @Scheduled(fixedRate = 2000)
-    public SendResult<String,String> SendPaymentTransactionsSynchronously() throws ExecutionException, InterruptedException {
+//    @Scheduled(fixedRate = 2000)
+    public SendResult<String,String> SendPaymentTransactionsSynchronously() throws ExecutionException, InterruptedException, TimeoutException {
         String transaction= generateRandomTransaction();
         System.out.println("Sending payment transactions {}"+transaction);
         SendResult<String,String> sendResult = kafkaTemplate.send("payment-topic",generateTransactionKey(),transaction).get();
@@ -73,6 +74,16 @@ public class ProducerService {
                 sendResult.getRecordMetadata().partition(),
                 sendResult.getRecordMetadata().offset(),
                 sendResult.getRecordMetadata().timestamp());
+        Message<String> message = MessageBuilder.withPayload(transaction)
+                .setHeader("kafka_key", generateTransactionKey())
+                .build();
+        SendResult<String,String> sendResult1=kafkaTemplate.send(message).get(10, TimeUnit.SECONDS);
+        System.out.printf("Received new metadata. \n" +
+                        "Topic: %s, Partition: %d, Offset: %d, Timestamp: %d%n",
+                sendResult1.getRecordMetadata().topic(),
+                sendResult1.getRecordMetadata().partition(),
+                sendResult1.getRecordMetadata().offset(),
+                sendResult1.getRecordMetadata().timestamp());
         return sendResult;
     }
 }

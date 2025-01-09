@@ -16,8 +16,11 @@ import java.util.Map;
 @Configuration
 public class ProducerConfiguration {
 
-    //ProducerFactory
-
+    /* ProducerFactory- sets the strategy for producing messages
+    Producer factory is thread safe so there will be one instance of it
+    in the entire ApplicationContext.This is supposed to lead to higher performance
+    We can make it
+     */
     @Bean
     public ProducerFactory<String,String> producerFactory(){
         Map<String,Object> configMaps= new HashMap<>();
@@ -32,13 +35,11 @@ public class ProducerConfiguration {
     //KafkaTemplate
     @Bean
     public KafkaTemplate<String,String> kafkaTemplate(){
-           KafkaTemplate kafkaTemplate=   new KafkaTemplate<>(producerFactory());
-           kafkaTemplate.setProducerListener(new ProducerListener() {
-           });
+           KafkaTemplate kafkaTemplate=   new KafkaTemplate<String,String>(producerFactory());
            return kafkaTemplate;
     }
 
-    //NewTopic
+    //NewTopic- automatically adds a topic of this type
     @Bean
     public NewTopic paymentTopic(){
         return new NewTopic("payment-topic",3,(short) 1);

@@ -1,5 +1,6 @@
 package KafkaConsumer.TrialConsumer.KafkaConfig;
 
+import KafkaConsumer.TrialConsumer.ConsumerListener;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.context.annotation.Bean;
@@ -10,6 +11,7 @@ import org.springframework.kafka.config.KafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
+import org.springframework.kafka.listener.ContainerProperties;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,13 +26,19 @@ public class KafkaConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         factory.setConcurrency(3);
-
         factory.getContainerProperties().setPollTimeout(3000);
+//        factory.setRecordInterceptor();
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        factory.getContainerProperties().setLogContainerConfig(true);
+
         return factory;
     }
 
     @Bean
     public ConsumerFactory<String, String> consumerFactory() {
+        ContainerProperties containerProps = new ContainerProperties("topic1");
+        ConsumerListener consumerListener=new ConsumerListener();
+        containerProps.setMessageListener(consumerListener);
         return new DefaultKafkaConsumerFactory<>(consumerConfigs());
     }
 
